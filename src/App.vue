@@ -2,75 +2,7 @@
     <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
         <div class="container">
             <div class="w-full my-4"></div>
-            <section>
-                <div class="flex">
-                    <div class="max-w-xs">
-                        <label
-                            for="wallet"
-                            class="block text-sm font-medium text-gray-700"
-                            >Тикер</label
-                        >
-                        <div class="mt-1 relative rounded-md shadow-md">
-                            <input
-                                v-model="ticker"
-                                @keydown.enter="add"
-                                type="text"
-                                name="wallet"
-                                id="wallet"
-                                class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                                placeholder="Например DOGE"
-                            />
-                        </div>
-                        <div
-                            v-if="hints.length"
-                            class="flex max-w-xs border-b-2"
-                        >
-                            <div
-                                v-for="h in hints"
-                                :key="h"
-                                class="pr-2 pl-2 my-2 mx-1 uppercase border-2 rounded-xl bg-gray-200 cursor-pointer"
-                                @click="selectHint(h)"
-                            >
-                                {{ h }}
-                            </div>
-                            <div></div>
-                        </div>
-                        <div
-                            v-if="isAlreadyAdded"
-                            class="max-w-xs ml-1 text-red-700"
-                        >
-                            Такой тикер уже добавлен
-                        </div>
-                        <div
-                            v-if="!isTockenExist"
-                            class="max-w-xs ml-1 text-red-700"
-                        >
-                            Такой валюты не существует
-                        </div>
-                    </div>
-                </div>
-                <button
-                    @click="add"
-                    type="button"
-                    class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                >
-                    <!-- Heroicon name: solid/mail -->
-                    <svg
-                        class="-ml-0.5 mr-2 h-6 w-6"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="30"
-                        height="30"
-                        viewBox="0 0 24 24"
-                        fill="#ffffff"
-                    >
-                        <path
-                            d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
-                        ></path>
-                    </svg>
-                    Добавить
-                </button>
-            </section>
-
+            <addTicker @add-ticker="add" v-model:tickers="tickers" />
             <template v-if="tickers.length">
                 <hr class="w-full border-t border-gray-600 my-4" />
                 <div>
@@ -206,34 +138,26 @@
 // [x] График сломан если везде одинаковые значения
 // [x] При удалении тикера остается выбор
 
-import {
-    subscribeToTicker,
-    unsubscribeFromTicker,
-    getAllTickersTitle,
-} from "./api";
+import { subscribeToTicker, unsubscribeFromTicker } from "./api";
+
+import addTicker from "./components/addTicker.vue";
 
 export default {
     name: "App",
 
     data() {
         return {
-            ticker: "",
             filter: "",
 
             tickers: [],
             selectedTicker: false,
 
             graph: [],
-            //graphElementWidth: 40,
             page: 1,
-
-            hintsData: [],
         };
     },
 
     created: async function () {
-        this.hintsData = await getAllTickersTitle();
-
         const windowData = Object.fromEntries(
             new URL(window.location).searchParams.entries()
         );
@@ -256,6 +180,10 @@ export default {
                 );
             });
         }
+    },
+
+    components: {
+        addTicker,
     },
 
     computed: {
@@ -300,35 +228,6 @@ export default {
                 page: this.page,
             };
         },
-
-        isAlreadyAdded() {
-            return this.tickers.find(
-                (t) => t.name === this.ticker.toUpperCase()
-            );
-        },
-
-        hints() {
-            let result = [];
-
-            if (this.ticker) {
-                for (let hint of this.hintsData) {
-                    if (
-                        hint
-                            .toLowerCase()
-                            .includes(this.ticker.toLowerCase()) &&
-                        !this.tickers.find((t) => t.name === hint)
-                    )
-                        result.push(hint);
-                    if (result.length >= 4) break;
-                }
-            }
-
-            return result;
-        },
-
-        isTockenExist() {
-            return this.ticker === "" || this.hints.length;
-        },
     },
 
     methods: {
@@ -356,21 +255,17 @@ export default {
             return price > 1 ? price.toFixed(2) : price.toPrecision(2);
         },
 
-        add() {
+        add(ticker) {
             const newTicker = {
-                name: this.ticker.toUpperCase(),
+                name: ticker.toUpperCase(),
                 price: "-",
             };
 
-            if (this.isTockenExist && !this.isAlreadyAdded) {
-                this.tickers = [...this.tickers, newTicker];
-                this.ticker = "";
-                this.filter = "";
-                this.hints = [];
-                subscribeToTicker(newTicker.name, (newPrice) =>
-                    this.updateTicker(newTicker.name, newPrice)
-                );
-            }
+            this.tickers = [...this.tickers, newTicker];
+            this.filter = "";
+            subscribeToTicker(newTicker.name, (newPrice) =>
+                this.updateTicker(newTicker.name, newPrice)
+            );
         },
 
         selectTicker(ticker) {
@@ -386,11 +281,6 @@ export default {
                 this.selectedTicker = false;
             }
             unsubscribeFromTicker(tickerToRemove.name);
-        },
-
-        selectHint(h) {
-            this.ticker = h;
-            this.add();
         },
 
         calcMaxGraphElements() {
