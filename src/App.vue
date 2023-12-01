@@ -75,7 +75,10 @@
                 </dl>
                 <hr class="w-full border-t border-gray-600 my-4" />
             </template>
-            <tickerGraph v-model:selectedTicker="selectedTicker" />
+            <tickerGraph
+                v-model:selectedTicker="selectedTicker"
+                @closeGraph="selectedTicker = false"
+            />
         </div>
     </div>
 </template>

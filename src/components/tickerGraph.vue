@@ -1,13 +1,12 @@
 <template>
-    <section
-        v-if="displayToggle && selectedTicker"
-        ref="graph"
-        class="relative"
-    >
+    <section v-if="selectedTicker" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
             {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div
+            ref="graph"
+            class="flex items-end border-gray-600 border-b border-l h-64"
+        >
             <div
                 v-for="(bar, idx) in normalizedGraph"
                 :key="idx"
@@ -17,7 +16,7 @@
             ></div>
         </div>
         <button
-            @click="displayToggle = !displayToggle"
+            @click="$emit('closeGraph')"
             type="button"
             class="absolute top-0 right-0"
         >
@@ -51,7 +50,6 @@ export default {
     data() {
         return {
             graph: [],
-            displayToggle: false,
         };
     },
 
@@ -62,9 +60,18 @@ export default {
         },
     },
 
+    emits: {
+        closeGraph: null,
+    },
+
     methods: {
         calcMaxGraphElements() {
-            if (this.$refs.graph && this.$refs.graphElement) {
+            if (
+                this.$refs.graph &&
+                this.$refs.graphElement &&
+                this.$refs.graphElement.length
+            ) {
+                console.log(this.$refs.graphElement);
                 return (
                     Math.floor(
                         this.$refs.graph.clientWidth /
@@ -98,12 +105,12 @@ export default {
                 );
         },
 
-        selectedTicker() {
-            console.log(this.selectedTicker);
-            console.log(this.graph);
-            if (this.selectedTicker)
+        selectedTicker(newTicker, oldTicker) {
+            if (this.selectedTicker && oldTicker.name === newTicker.name) {
                 this.graph = [...this.graph, this.selectedTicker.price];
-            else this.graph = [];
+            } else {
+                this.graph = [];
+            }
         },
     },
 };
